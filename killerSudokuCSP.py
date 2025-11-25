@@ -1,7 +1,23 @@
-# optimized_killer_solver_mask.py
+# optimized_killer_solver_mask_logged.py
 from time import time
 from itertools import combinations
 import json
+
+# -------------------------
+# Config logging / verbose
+# -------------------------
+VERBOSE = True
+log_file = "killer_solver.txt"
+
+def log(msg):
+    if not VERBOSE:
+        return
+    with open(log_file, "a", encoding="utf8") as f:
+        f.write(msg + "\n")
+
+if VERBOSE:
+    open(log_file, "w").close()
+    log("=== Killer Sudoku Solver Started ===")
 
 # -------------------------
 # Utilidades de bitmask
@@ -9,7 +25,6 @@ import json
 def mask_for_digit(d): return 1 << (d-1)
 def digits_from_mask(m):
     d = []
-    bit = 1
     i = 1
     while m:
         if m & 1:
@@ -39,136 +54,18 @@ def coord_to_cell(rc):
     return f"{chr(c + ord('A'))}{r+1}"
 
 # -------------------------
-# Pegar aquí tu raw_json (misma estructura que antes)
+# Leer puzzle desde JSON
 # -------------------------
+def read_json(file):
+    with open(file,"r", encoding="utf8") as f:
+        data = json.load(f)
+    return data
 
+raw_json = read_json("puzzle.json")
 
-# raw_json = [
-#   {
-#     "sum": 3,
-#     "cells": ["A1","A2"]
-#   },
-#   {
-#     "sum": 24,
-#     "cells": ["B1", "C1", "B2"]
-#   },
-#   {
-#     "sum": 20,
-#     "cells": ["D1", "E1","E2"]
-#   },
-#   {
-#     "sum": 12,
-#     "cells": ["F1", "F2", "F3"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["G1", "H1","I1"]
-#   },
-#   {
-#     "sum": 13,
-#     "cells": ["G2", "H2","H3"]
-#   },
-#   {
-#     "sum": 6,
-#     "cells": ["C2","D2"]
-#   },
-#   {
-#     "sum": 9,
-#     "cells": ["I2","I3"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["A3", "B3","B4"]
-#   },
-#   {
-#     "sum": 13,
-#     "cells": ["C3", "C4","D3"]
-#   },
-#   {
-#     "sum": 12,
-#     "cells": ["E3", "E4","D4"]
-#   },
-#   {
-#     "sum": 11,
-#     "cells": ["G3", "G4"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["A4", "A5","B5"]
-#   },
-#   {
-#     "sum": 23,
-#     "cells": ["F4", "F5", "F6", "E6"]
-#   },
-#   {
-#     "sum": 16,
-#     "cells": ["H4", "H5","G5"]
-#   },
-#   {
-#     "sum": 28,
-#     "cells": ["I4", "I5","I6","H6","H7","I7"]
-#   },
-#   {
-#     "sum": 11,
-#     "cells": ["C5", "C6","D6"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["D5","E5"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["A6", "B6"]
-#   },
-#   {
-#     "sum": 25,
-#     "cells": ["G6","G7","F7","E7","E8"]
-#   },
-#   {
-#     "sum": 11,
-#     "cells": ["A7", "B7","B8"]
-#   },
-#   {
-#     "sum": 12,
-#     "cells": ["C7","D7"]
-#   },
-#   {
-#     "sum": 13,
-#     "cells": ["C8", "C9","B9"]
-#   },
-#   {
-#     "sum": 14,
-#     "cells": ["D8","D9"]
-#   },
-#   {
-#     "sum": 16,
-#     "cells": ["A8", "A9"]
-#   },
-#   {
-#     "sum": 11,
-#     "cells": ["F8", "G8"]
-#   },
-#   {
-#     "sum": 13,
-#     "cells": ["H8","I8"]
-#   },
-#   {
-#     "sum": 13,
-#     "cells": ["G9", "H9","I9"]
-#   },
-#   {
-#     "sum": 6,
-#     "cells": ["E9", "F9"]
-#   }
-# ]
 # -------------------------
 # Parse jaulas y estructuras
 # -------------------------
-def read_json():
-    with open("puzzle.json","r") as f:
-        data = json.load(f)
-    return data
-raw_json = read_json()
 cages = []
 cage_map = {}
 for idx, c in enumerate(raw_json):
@@ -225,7 +122,7 @@ for cage in cages:
         domains[coord] &= allowed
 
 # -------------------------
-# Fast propagation with undo stack
+# Fast propagation with undo stack (logged versions)
 # -------------------------
 def eliminate(dom, coord, valmask, changes):
     cur = dom[coord]
@@ -233,38 +130,60 @@ def eliminate(dom, coord, valmask, changes):
         new = cur & ~valmask
         if new == cur:
             return True
+
+        if VERBOSE:
+            log(f"[ELIMINATE] {coord_to_cell(coord)} remove {digits_from_mask(valmask)} "
+                f"=> {digits_from_mask(new)}")
+
         changes.append((coord, cur))
         dom[coord] = new
+
         if new == 0:
+            if VERBOSE: log(f"[FAIL] Domain of {coord_to_cell(coord)} became EMPTY")
             return False
+
         if count_bits(new) == 1:
-            singleton_mask = new
+            singleton = new
+            if VERBOSE: log(f"[UNIT] {coord_to_cell(coord)} is now {digits_from_mask(singleton)}")
             for p in PEERS[coord]:
-                if not eliminate(dom, p, singleton_mask, changes):
+                if not eliminate(dom, p, singleton, changes):
                     return False
+
     return True
 
 def assign(dom, coord, valmask, changes):
     cur = dom[coord]
     if cur == valmask:
         return True
+
+    if VERBOSE:
+        log(f"[ASSIGN] {coord_to_cell(coord)} = {digits_from_mask(valmask)}")
+
     changes.append((coord, cur))
     dom[coord] = valmask
+
     if count_bits(valmask) == 0:
         return False
+
     for p in PEERS[coord]:
         if not eliminate(dom, p, valmask, changes):
             return False
+
     return True
 
 def prune_by_cage(dom, changes):
+    if VERBOSE: log("[CAGE] Starting cage pruning")
+
     for cage in cages:
         cells = cage["cells"]
         combos = cage_combos_masks[cage["id"]]
+
         valid = []
         union_mask = 0
         for cell in cells:
             union_mask |= dom[cell]
+
+        # Filtrar combos válidos
         for cm in combos:
             if (cm & ~union_mask) != 0:
                 continue
@@ -273,17 +192,19 @@ def prune_by_cage(dom, changes):
             while b:
                 lsb = (b & -b)
                 b -= lsb
-                found = False
-                for cell in cells:
-                    if dom[cell] & lsb:
-                        found = True; break
-                if not found:
-                    ok = False; break
+                if not any(dom[cell] & lsb for cell in cells):
+                    ok = False
+                    break
             if ok:
                 valid.append(cm)
+
         if not valid:
+            if VERBOSE: log(f"[CAGE FAIL] Cage {cage['id']} has no valid combos")
             return False
-        allowed_per_cell = {cell:0 for cell in cells}
+
+        # allowed_per_cell por restricción de combinaciones
+        allowed = {cell: 0 for cell in cells}
+
         for cm in valid:
             b = cm
             while b:
@@ -291,23 +212,34 @@ def prune_by_cage(dom, changes):
                 b -= lsb
                 for cell in cells:
                     if dom[cell] & lsb:
-                        allowed_per_cell[cell] |= lsb
+                        allowed[cell] |= lsb
+
+        # Reducir dominios
         for cell in cells:
-            newmask = dom[cell] & allowed_per_cell[cell] if allowed_per_cell[cell] else dom[cell]
-            if newmask != dom[cell]:
+            new = dom[cell] & allowed[cell]
+            if new != dom[cell]:
+                if VERBOSE:
+                    log(f"[CAGE REDUCE] {coord_to_cell(cell)} "
+                        f"{digits_from_mask(dom[cell])} → {digits_from_mask(new)}")
+
                 changes.append((cell, dom[cell]))
-                dom[cell] = newmask
-                if newmask == 0:
+                dom[cell] = new
+
+                if new == 0:
+                    if VERBOSE: log(f"[FAIL] Domain of {coord_to_cell(cell)} became EMPTY")
                     return False
-                if count_bits(newmask) == 1:
-                    singleton = newmask
+
+                if count_bits(new) == 1:
+                    singleton = new
                     for p in PEERS[cell]:
                         if not eliminate(dom, p, singleton, changes):
                             return False
+
     return True
 
 def initial_propagate(dom):
     changes = []
+    # Propagate singletons
     for cell in ALL_CELLS:
         if count_bits(dom[cell]) == 1:
             valmask = dom[cell]
@@ -316,6 +248,7 @@ def initial_propagate(dom):
                     for c,prev in reversed(changes):
                         dom[c] = prev
                     return False
+    # Prune by cage
     if not prune_by_cage(dom, changes):
         for c,prev in reversed(changes):
             dom[c] = prev
@@ -337,6 +270,8 @@ def select_unassigned_variable(dom):
             best_count = c
             best = cell
             if best_count == 2: break
+    if VERBOSE and best is not None:
+        log(f"[SELECT] {coord_to_cell(best)} with {count_bits(dom[best])} options: {digits_from_mask(dom[best])}")
     return best
 
 def order_values(dom, var):
@@ -350,35 +285,51 @@ def order_values(dom, var):
                 cnt += 1
         impacts.append((cnt, v))
     impacts.sort()
-    return [v for _,v in impacts]
+    ordered = [v for _,v in impacts]
+    if VERBOSE:
+        log(f"[ORDER] {coord_to_cell(var)} order {ordered}")
+    return ordered
 
 # -------------------------
 # Backtracking with undo stack
 # -------------------------
-def backtrack(dom):
+def backtrack(dom, depth=0):
+    # check if solved
     solved = True
     for cell in ALL_CELLS:
         if count_bits(dom[cell]) != 1:
             solved = False
             break
     if solved:
+        if VERBOSE: log("[SOLVED] Puzzle complete.")
         return True
+
     var = select_unassigned_variable(dom)
     if var is None:
         return False
+
+    if VERBOSE:
+        log(f"{'  '*depth}[BRANCH] Try variable {coord_to_cell(var)} with domain {digits_from_mask(dom[var])}")
+
     for v in order_values(dom, var):
         vm = mask_for_digit(v)
         changes = []
+        if VERBOSE:
+            log(f"{'  '*depth}[TRY] {coord_to_cell(var)} = {v}")
         if not assign(dom, var, vm, changes):
+            if VERBOSE: log(f"{'  '*depth}[FAIL-ASSIGN] {coord_to_cell(var)} = {v}")
             for c,prev in reversed(changes):
                 dom[c] = prev
             continue
         if not prune_by_cage(dom, changes):
+            if VERBOSE: log(f"{'  '*depth}[FAIL-PRUNE] after assigning {coord_to_cell(var)} = {v}")
             for c,prev in reversed(changes):
                 dom[c] = prev
             continue
-        if backtrack(dom):
+        if backtrack(dom, depth+1):
             return True
+        # undo
+        if VERBOSE: log(f"{'  '*depth}[BACKTRACK] undo {coord_to_cell(var)} = {v}")
         for c,prev in reversed(changes):
             dom[c] = prev
     return False
