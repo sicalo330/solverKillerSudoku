@@ -1,6 +1,7 @@
 # optimized_killer_solver_mask.py
 from time import time
 from itertools import combinations
+import json
 
 # -------------------------
 # Utilidades de bitmask
@@ -40,127 +41,134 @@ def coord_to_cell(rc):
 # -------------------------
 # Pegar aquí tu raw_json (misma estructura que antes)
 # -------------------------
-raw_json = [
-  {
-    "sum": 3,
-    "cells": ["A1","A2"]
-  },
-  {
-    "sum": 24,
-    "cells": ["B1", "C1", "B2"]
-  },
-  {
-    "sum": 20,
-    "cells": ["D1", "E1","E2"]
-  },
-  {
-    "sum": 12,
-    "cells": ["F1", "F2", "F3"]
-  },
-  {
-    "sum": 14,
-    "cells": ["G1", "H1","I1"]
-  },
-  {
-    "sum": 13,
-    "cells": ["G2", "H2","H3"]
-  },
-  {
-    "sum": 6,
-    "cells": ["C2","D2"]
-  },
-  {
-    "sum": 9,
-    "cells": ["I2","I3"]
-  },
-  {
-    "sum": 14,
-    "cells": ["A3", "B3","B4"]
-  },
-  {
-    "sum": 13,
-    "cells": ["C3", "C4","D3"]
-  },
-  {
-    "sum": 12,
-    "cells": ["E3", "E4","D4"]
-  },
-  {
-    "sum": 11,
-    "cells": ["G3", "G4"]
-  },
-  {
-    "sum": 14,
-    "cells": ["A4", "A5","B5"]
-  },
-  {
-    "sum": 23,
-    "cells": ["F4", "F5", "F6", "E6"]
-  },
-  {
-    "sum": 16,
-    "cells": ["H4", "H5","G5"]
-  },
-  {
-    "sum": 28,
-    "cells": ["I4", "I5","I6","H6","H7","I7"]
-  },
-  {
-    "sum": 11,
-    "cells": ["C5", "C6","D6"]
-  },
-  {
-    "sum": 14,
-    "cells": ["D5","E5"]
-  },
-  {
-    "sum": 14,
-    "cells": ["A6", "B6"]
-  },
-  {
-    "sum": 25,
-    "cells": ["G6","G7","F7","E7","E8"]
-  },
-  {
-    "sum": 11,
-    "cells": ["A7", "B7","B8"]
-  },
-  {
-    "sum": 12,
-    "cells": ["C7","D7"]
-  },
-  {
-    "sum": 13,
-    "cells": ["C8", "C9","B9"]
-  },
-  {
-    "sum": 14,
-    "cells": ["D8","D9"]
-  },
-  {
-    "sum": 16,
-    "cells": ["A8", "A9"]
-  },
-  {
-    "sum": 11,
-    "cells": ["F8", "G8"]
-  },
-  {
-    "sum": 13,
-    "cells": ["H8","I8"]
-  },
-  {
-    "sum": 13,
-    "cells": ["G9", "H9","I9"]
-  },
-  {
-    "sum": 6,
-    "cells": ["E9", "F9"]
-  }
-]
+
+
+# raw_json = [
+#   {
+#     "sum": 3,
+#     "cells": ["A1","A2"]
+#   },
+#   {
+#     "sum": 24,
+#     "cells": ["B1", "C1", "B2"]
+#   },
+#   {
+#     "sum": 20,
+#     "cells": ["D1", "E1","E2"]
+#   },
+#   {
+#     "sum": 12,
+#     "cells": ["F1", "F2", "F3"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["G1", "H1","I1"]
+#   },
+#   {
+#     "sum": 13,
+#     "cells": ["G2", "H2","H3"]
+#   },
+#   {
+#     "sum": 6,
+#     "cells": ["C2","D2"]
+#   },
+#   {
+#     "sum": 9,
+#     "cells": ["I2","I3"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["A3", "B3","B4"]
+#   },
+#   {
+#     "sum": 13,
+#     "cells": ["C3", "C4","D3"]
+#   },
+#   {
+#     "sum": 12,
+#     "cells": ["E3", "E4","D4"]
+#   },
+#   {
+#     "sum": 11,
+#     "cells": ["G3", "G4"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["A4", "A5","B5"]
+#   },
+#   {
+#     "sum": 23,
+#     "cells": ["F4", "F5", "F6", "E6"]
+#   },
+#   {
+#     "sum": 16,
+#     "cells": ["H4", "H5","G5"]
+#   },
+#   {
+#     "sum": 28,
+#     "cells": ["I4", "I5","I6","H6","H7","I7"]
+#   },
+#   {
+#     "sum": 11,
+#     "cells": ["C5", "C6","D6"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["D5","E5"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["A6", "B6"]
+#   },
+#   {
+#     "sum": 25,
+#     "cells": ["G6","G7","F7","E7","E8"]
+#   },
+#   {
+#     "sum": 11,
+#     "cells": ["A7", "B7","B8"]
+#   },
+#   {
+#     "sum": 12,
+#     "cells": ["C7","D7"]
+#   },
+#   {
+#     "sum": 13,
+#     "cells": ["C8", "C9","B9"]
+#   },
+#   {
+#     "sum": 14,
+#     "cells": ["D8","D9"]
+#   },
+#   {
+#     "sum": 16,
+#     "cells": ["A8", "A9"]
+#   },
+#   {
+#     "sum": 11,
+#     "cells": ["F8", "G8"]
+#   },
+#   {
+#     "sum": 13,
+#     "cells": ["H8","I8"]
+#   },
+#   {
+#     "sum": 13,
+#     "cells": ["G9", "H9","I9"]
+#   },
+#   {
+#     "sum": 6,
+#     "cells": ["E9", "F9"]
+#   }
+# ]
 # -------------------------
 # Parse jaulas y estructuras
 # -------------------------
+def read_json():
+    with open("puzzle.json","r") as f:
+        data = json.load(f)
+    return data
+raw_json = read_json()
 cages = []
 cage_map = {}
 for idx, c in enumerate(raw_json):
