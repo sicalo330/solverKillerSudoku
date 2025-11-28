@@ -1,4 +1,0 @@
-=== Killer Sudoku Solver Started ===
-[CAGE] Starting cage pruning
-[SELECT] D3 with 2 options: [7, 9]
-[BRANCH] Try variable D3 with domain [7, 9]
