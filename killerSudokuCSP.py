@@ -2,6 +2,7 @@
 from time import time
 from itertools import combinations
 import json
+#Código del sudoku KL5EPRXC
 
 VERBOSE = True
 #Nombre del archivo para poner el verbose
@@ -121,7 +122,7 @@ ALL_MASK = sum(DIGIT_MASKS)
 
 cage_combos_masks = {}
 #Recordar que cages fue una variable que se inicializó hace unas líneas de código
-#atrás y era la lista de valores con su determinada suma
+#atrás y era la lista del resultado de la suma con su determinada suma
 for cage in cages:
     #k es la cantidad de coordenadas que hay en una lista, ejemplo [(0,1),(0,2)]
     #k = 2
@@ -159,7 +160,6 @@ for cage in cages:
     for coord in cage["cells"]:
         #Crea un diccionario con cada celda como id y su valor en binario
         domains[coord] &= allowed
-
 
 def eliminate(dom, coord, valmask, changes):
     #Obtiene el dominio actual
@@ -216,7 +216,6 @@ def assign(dom, coord, valmask, changes):
     #SI la cantidad de bits es 0, es decir no hay valor que agregar entonces se retorna false
     if count_bits(valmask) == 0:
         return False
-    
     for p in PEERS[coord]:
         #Si se va a usar el valor, se elimina del dominio para que ningún vecino lo pueda usar
         if not eliminate(dom, p, valmask, changes):
@@ -233,40 +232,25 @@ def prune_by_cage(dom, changes):
         cells = cage["cells"]
         #Recordar que combos es la combinación de digitos que pueden estar en la celda
         combos = cage_combos_masks[cage["id"]]
-
         valid = []
         union_mask = 0
-        """
-        Hace una unión con los dominios de las celdas, por ejemplo:
-        celda A = posibles {1,3,7}
-        celda B = posibles {2,3}
-        celda C = posibles {4,7,9}
-        Es decir que todos los valores posibles son: {1,2,3,4,7,9}
-        Con esto se revisa cada combinación posible de la celda
-        """
         for cell in cells:
             union_mask |= dom[cell]
 
         #Filtrar combos válidos
         for cm in combos:
-            #deja únicamente aquellas que todavía son compatibles con los dominios actuales de las celdas
-            #Por ejemplo si ninguna celda puede ser 5 u 8 entonces se descarta cualquier combinación que los incluya
+
             if (cm & ~union_mask) != 0:
                 continue
             ok = True
             b = cm
-            """
-            Hay que tener en cuenta que el primer if descarta las combinaciones que incluyan alguno de los posibles valores de las celdas
-            esten ahí, pero no todas
-            En este while se recorre bit por bit los dígitos Cada bit representa un número para formar la suma por ejemplo (1+3+7)
-            Este while verifica que cada dígito de la combinación tenga por lo menos una celda donde podría ir
-            """
+
             while b:
                 lsb = (b & -b)
                 b -= lsb
                 #Este id determina si al menos un valor de los bits puede tomar la celda
                 #Si entra al if es porque NO se puede tomar ningún valor
-                #Si NO entra es porque SÍ entra es porque almenos una celda puede tomar ese valor 
+                #Si NO entra es porque almenos una celda puede tomar ese valor 
                 if not any(dom[cell] & lsb for cell in cells):
                     ok = False
                     break
@@ -281,12 +265,6 @@ def prune_by_cage(dom, changes):
         # allowed_per_cell por restricción de combinaciones
         allowed = {cell: 0 for cell in cells}
 
-        #De los valores que son validos revisar cada uno de sus digitos
-        #Y por cada digito verificar cuál de ellos puede tomar una celda
-        """
-        Por ejemplo si la suma da 10 y esta es la lista valid: {1,9}, {2,8}, {3,7}, {4,6}
-        Y revisa cada uno si está en el dominio actual de la lista
-        """
         for cm in valid:
             b = cm
             while b:
